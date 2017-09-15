@@ -1,5 +1,5 @@
-UnBEuCuido
-=====================
+# UnBEuCuido
 
+Códigos e implementações para a ideia do aplicativo/software para auxiliar os envolvidos na univeridade como uma plataforma.
 
-Um teste
+Leia o arquivo ```UnBEuCuido.pdf``` para melhores informações
