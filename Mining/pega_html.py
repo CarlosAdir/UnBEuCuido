@@ -54,10 +54,28 @@ def le_arquivo(nome):
 			linhas[i] = linhas[i].split('\r')[0]
 	return linhas
 
+class Pagina:
+	# Da classe Cursos
+	FLUXO 			= '/fluxo.aspx?cod='
+	CURRICULO 		= '/curriculo.aspx?cod='
+	DADOS 			= '/curso_dados.aspx?cod='
+	RELACAO 		= '/curso_rel.aspx?cod='
+	# Da classe Disciplina
+	DISCIPLINA 		= '/disciplina.aspx?cod='
+	# Da classe Oferta
+	DEPARTAMENTO 	= '/oferta_dep.aspx?cod='
+	OFER_DISCI		= '/oferta_dis.aspx?cod='
+	TURMAS 			= '/oferta_dados.aspx?cod='
+	ESPERA 			= '/faltavaga_rel.aspx?cod='
 
 class Nivel:
 	GRADUACAO = 'graduacao'
 	POS = 'posgraduacao'
+
+class Estado:
+	# A maneira que o dado está armazenado
+	tratado = "/" + "tratado" + "/"
+	html = "/" + "html" + "/"
 
 class Campus:
 	DARCY = 1
@@ -84,64 +102,108 @@ class Habilitacoes:
     ENM = 6424 # Engenharia Mecânica
 
 
+'''
+
+
+'''
+
+def auxiliar(pagina, origem, destino, processo): # Função auxiliar que é comum a todos
+	# PARTE IGUAL
+	if processo != 0: # Protecao para a escolha de ja existir dados, mas nao existir
+		if processo != 1: # Protecao para a escolha dos dados estiverem tratados
+			if not existe_arquivo(origem):
+				processo = 1
+		if processo == 1:
+			if not existe_arquivo(destino):
+				processo = 0
+	if processo == 0: 						# se precisa capturar dados da internet
+		html = pega_html(pagina)
+		time = grava(html, origem)
+		html = html.split('\n')
+	elif processo == 1:						# Se ja existe o dado bruno no computador
+		html = le_arquivo(origem)
+		time = html[0].split()
+		html.remove(html[0])
+	else:									# Se ja existem e os dados estao tratados
+		info_util = le_arquivo(destino)
+		time = info_util[0].split()
+		info_util.remove(info_util[0])
+		for i in xrange(len(info_util)):
+			info_util[i] = info_util[i].split(';')[:-1]
+		return time, None, info_util
+	return time, html, None
+
 class Cursos:
 
 	@staticmethod
-	def fluxo(habilitacao, nivel = Nivel.GRADUACAO):
+	def fluxo(habilitacao, nivel = Nivel.GRADUACAO, processo = 2):
 	# https://matriculaweb.unb.br/graduacao/fluxo.aspx?cod=3131
-		pagina = 'https://matriculaweb.unb.br/' + nivel + '/fluxo.aspx?cod=' + habilitacao
-		return pega_html(pagina)
+		habilitacao 	= str(habilitacao)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.FLUXO + habilitacao
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/f_" + habilitacao + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/f_" + habilitacao + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
+			return info_util
+		return html
 
-	def curriculo(habilitacao, nivel = Nivel.GRADUACAO):
+	@staticmethod
+	def curriculo(habilitacao, nivel = Nivel.GRADUACAO, processo = -1):
 	# https://matriculaweb.unb.br/graduacao/curriculo.aspx?cod=3131
-		pagina = 'https://matriculaweb.unb.br/' + nivel + '/curriculo.aspx?cod=' + habilitacao
-		return pega_html(pagina)
+		
+		habilitacao 	= str(habilitacao)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.CURRICULO + habilitacao
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/c_" + habilitacao + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/c_" + habilitacao + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
+			return info_util
+		return html
 
 	@staticmethod
-	def curso(curso, nivel = Nivel.GRADUACAO):
+	def curso(curso, nivel = Nivel.GRADUACAO, processo = -1):
 	# https://matriculaweb.unb.br/graduacao/curso_dados.aspx?cod=19
-		pagina = 'https://matriculaweb.unb.br/' + nivel + '/curso_dados.aspx?cod=' + curso
-		return pega_html(pagina)
+		curso 			= str(curso)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.DADOS + curso
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/" + curso + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/" + curso + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
+			return info_util
+		return html
+
+
 
 	@staticmethod
-	def relacoes(nivel = Nivel.GRADUACAO, campus = Campus.DARCY):
+	def relacao(nivel = Nivel.GRADUACAO, campi = Campus.DARCY, processo = -1):
 	# https://matriculaweb.unb.br/graduacao/curso_rel.aspx?cod=1
-		pagina = 'https://matriculaweb.unb.br/' + nivel + '/curso_rel.aspx?cod=' + campus
-		return pega_html(pagina)
+		campi 			= str(campi)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.RELACAO + campi
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/r_" + campi + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/r_" + campi + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
+			return info_util
+		# Ate esse momento, só esta definido html e time. Os outros dados não são uteis
+		return html
 
 
 class Disciplina:
 	@staticmethod
 	def informacoes(disciplina, nivel = Nivel.GRADUACAO, pasta = "Informacoes/temp/", processo = -1):
 		# https://matriculaweb.unb.br/graduacao/disciplina.aspx?cod=116319
-		disciplina = str(disciplina)
-		if processo == -1:
-			if existe_arquivo(pasta + 'tratado/' + nivel + "/Oferta/espera/" + disciplina + ".txt"): 	# Os dados existem e estao processados
-				processo = 2
-			elif existe_arquivo(pasta + 'html/' + nivel + "/Oferta/espera/" + disciplina + ".txt"): 	# Os dados existem mas nao processados
-				processo = 1
-			else: 																						# Os dados existem
-				processo = 0
-		if processo == 0:
-			pagina = 'https://matriculaweb.unb.br/' + nivel + '/disciplina.aspx?cod=' + disciplina
-			html = pega_html(pagina)
-			time = grava(html, pasta + 'html/' + nivel + "/Disciplinas/" + disciplina + ".txt")
-			html = html.split('\n')
-			processo += 2
-		elif processo == 1:
-			html = le_arquivo(pasta + 'html/' + nivel + "/Disciplinas/" + disciplina + ".txt")
-			time = html[0].split()
-			html.remove(html[0])
-			processo += 1
-		else:
-			info_util = le_arquivo(pasta + "tratado/" + nivel + "/Disciplinas/" + disciplina + ".txt")
-			time = info_util[0].split()
-			info_util.remove(info_util[0])
-			for i in xrange(len(info_util)):
-				info_util[i] = info_util[i].split(';')[:-1]
+		disciplina 		= str(disciplina)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.DISCIPLINA + disciplina
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/espera/" + disciplina + ".txt"
+		destino			= pasta + Estado.tratado 		 + nivel + "/Oferta/espera/" + disciplina + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
 			return info_util
 
-		
+	
+
+
+		'''
 		# Para tratar os dados
 		contador = [0];
 		while contador[0] < len(html) and (not "VER OFERTA" in html[contador[0]]):
@@ -174,8 +236,9 @@ class Disciplina:
 		#info_util[3] = info_util[3][0]
 		print info_util
 		print '\n\n'
-		grava(info_util, pasta + 'tratado/' + nivel + "/Disciplinas/" + disciplina + '.txt', time)
+		grava(info_util, pasta + Estado.tratado + nivel + "/Disciplinas/" + disciplina + '.txt', time)
 		return info_util
+		'''
 		
 class Oferta:
 
@@ -184,39 +247,23 @@ class Oferta:
 		# processo so recebe 0 ou 1 ou 3 como argumento
 		# a pagina é como:
 		# https://matriculaweb.unb.br/graduacao/oferta_dep.aspx?cod=1
-		if processo == -1:
-			if existe_arquivo(pasta + 'tratado/' + nivel + "/Oferta/" + str(campi) + ".txt"): 	# Os dados existem e estao processados
-				processo = 2
-			elif existe_arquivo(pasta + 'html/' + nivel + "/Oferta/" + str(campi) + ".txt"): 	# Os dados existem mas nao processados
-				processo = 1
-			else: 																						# Os dados nao existem
-				processo = 0
-		if processo == 0:
-			# pega da web e armazena, pois processo 0 indica que é desde o inicio
-			# Ou seja, a captura de dados pela internet e depois grava em um arquivo o html lido
-			pagina = 'https://matriculaweb.unb.br/' + nivel + '/oferta_dep.aspx?cod=' + str(campi)
-			html = pega_html(pagina)
-			time = grava(html, pasta + 'html/' + nivel + "/Oferta/" + str(campi) + ".txt")
-			html = html.split('\n')
-			processo += 2
-		elif processo == 1:
-			# pega já do arquivo existente para tratar caso necessario, so entra nesse caso se existir o arquivo
-			# Simplesmente pega os dados do arquivo, não é necessário entrar nesse campo se for processo 0
-			html = le_arquivo(pasta + 'html/' + nivel + "/Oferta/" + str(campi) + ".txt")
-			time = html[0].split()
-			html.remove(html[0])
-			processo += 1
-		else:
-			# vem para esse caso já que está tratado
-			info_util = le_arquivo(pasta + 'tratado/' + nivel + "/Oferta/" + str(campi) + '.txt')
-			time = info_util[0].split()
-			info_util.remove(info_util[0])
-			for i in xrange(len(info_util)):
-				info_util[i] = info_util[i].split(';')[:-1]
+		campi			= str(campi)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.DEPARTAMENTO + campi
+		origem 			= pasta + Estado.html + nivel + "/Oferta/" + campi + ".txt"
+		destino 		= pasta + Estado.tratado + nivel + "/Oferta/" + campi + '.txt'
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
 			return info_util
+
+
+		'''
+
+
+
+
 		# Parte 1 em que somente pega a pagina html e transforma em string
 		# Neste momento já foi armazenado o html em um arquivo. Aqui começa a tratar os dados para armazenar em
-		# pasta + 'tratado/' + nivel + "/Oferta/" + str(campi) + ".txt"
+		# pasta + Estado.tratado + nivel + "/Oferta/" + campi + ".txt"
 		# tratar uma lista de departamentos
 		# indica para tratar os dados armazenados
 		contador = 0
@@ -235,45 +282,31 @@ class Oferta:
 				info_util[i] = info_util[i].split('</td><td>')
 				info_util[i][2] = info_util[i][2].split("' style='text-transform: uppercase;'>")[1]
 				info_util[i][2] = info_util[i][2].split("</a></td></tr>")[0]
-			grava(info_util, pasta + 'tratado/' + nivel + "/Oferta/" + str(campi) + '.txt', time)
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/" + campi + '.txt', time)
 		else:
 			print 'Erro com: ' + nivel + " + campi:" + campi
 			return [[]] 
 		# em info_util ja esta armazenado como info_util[i] = [codigo, sigla, nome]
 		return info_util
-
+		'''
 	
 	@staticmethod
 	def disciplinas(departamento, nivel = Nivel.GRADUACAO, campi = Campus.DARCY, pasta = "Informacoes/temp/", processo = -1):
 		# campi nao adianta de nada pois nao interfere no resultado final. Apenas colocado para auxiliar no armazenamento
 		# mas é facilmente tirado. A utilizacao é somente para iteracao
 		# a pagina é como https://matriculaweb.unb.br/graduacao/oferta_dis.aspx?cod=422
-		if processo == -1:
-			if existe_arquivo(pasta + 'tratado/' + nivel + "/Oferta/" + str(campi) + "_" + departamento + ".txt"): 	# Os dados existem e estao processados
-				processo = 2
-			elif existe_arquivo(pasta + 'html/' + nivel + "/Oferta/" + str(campi) + "_" + departamento + ".txt"): 	# Os dados existem mas nao processados
-				processo = 1
-			else: 																						# Os dados nao existem
-				processo = 0
-		if processo == 0:
-			# caso precise baixar tudo da internet
-			pagina = 'https://matriculaweb.unb.br/' + nivel + '/oferta_dis.aspx?cod=' + str(departamento)
-			html = pega_html(pagina)
-			time = grava(html, pasta + 'html/' + nivel + "/Oferta/" + str(campi) + "_" + departamento + ".txt")
-			html = html.split('\n')
-		elif processo == 1:
-			# caso ja tenha armazenado
-			html = le_arquivo(pasta + 'html/' + nivel + "/Oferta/" + str(campi) + "_" + departamento + ".txt")
-			time = html[0].split()
-			html.remove(html[0])
-		else:
-			# le o documento tratado
-			info_util = le_arquivo(pasta + 'tratado/' + nivel + "/Oferta/" + str(campi) + "_" + departamento + ".txt")
-			time = info_util[0].split()
-			info_util.remove(info_util[0])
-			for i in xrange(len(info_util)):
-				info_util[i] = info_util[i].split(';')[:-1]
+		# departamento sempre será string pois existe o departamento denominado "003" em vez de 3.
+		campi 			= str(campi)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.OFER_DISCI + departamento
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/" + campi + "_" + departamento + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/" + campi + "_" + departamento + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
 			return info_util
+
+
+
+		'''
 		# Agora que ja tem os dados armazenados na memoria RAM, no caso todo o arquivo html em que cada
 		# linha é um elemento da lista na ordem dada por arquivo. lista[0] = primeira linha e assim por diante
 		contador = 0
@@ -294,12 +327,12 @@ class Oferta:
 				info_util[i] = info_util[i].split("<a title='")
 				info_util[i][0] = info_util[i][0].split("</td><td><a href=")[0]
 				info_util[i][1] = info_util[i][1].split("' href='")[0]
-			grava(info_util, pasta + 'tratado/' + nivel + "/Oferta/" + str(campi) + "_" + departamento + ".txt", time)
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/" + campi + "_" + departamento + ".txt", time)
 		else:
 			print 'Erro com: ' + nivel + " + dep:" + departamento
 			return [[]]
 		return info_util
-
+		'''
 
 
 	@staticmethod
@@ -309,30 +342,18 @@ class Oferta:
 		# se tiver departamento:
 		# https://matriculaweb.unb.br/graduacao/oferta_dados.aspx?cod=200212&dep=004
 		# assume-se que departamento já é string
-		if processo == -1:
-			if existe_arquivo(pasta + 'tratado/' + nivel + "/Oferta/disciplinas/" + str(departamento) + "_" + disciplina + ".txt"): 	# Os dados existem e estao processados
-				processo = 2
-			elif existe_arquivo(pasta + 'html/' + nivel + "/Oferta/disciplinas/" + str(departamento) + "_" + disciplina + ".txt"): 	# Os dados existem mas nao processados
-				processo = 1
-			else: 																						# Os dados existem
-				processo = 0
-		if processo == 0:
-			disciplina = str(disciplina)
-			pagina = 'https://matriculaweb.unb.br/' + nivel + '/oferta_dados.aspx?cod=' + disciplina + '&dep=' + departamento
-			html = pega_html(pagina)
-			time = grava(html, pasta + 'html/' + nivel + "/Oferta/disciplinas/" + str(departamento) + "_" + disciplina + ".txt")
-			html = html.split('\n')
-		elif processo == 1:
-			html = le_arquivo(pasta + 'html/' + nivel + "/Oferta/disciplinas/" + str(departamento) + "_" + disciplina + ".txt")
-			time = html[0].split()
-			html.remove(html[0])
-		else:
-			info_util = le_arquivo(pasta + 'tratado/' + nivel + "/Oferta/disciplinas/" + str(departamento) + "_" + disciplina + ".txt")
-			time = info_util[0].split()
-			info_util.remove(info_util[0])
-			for i in xrange(len(info_util)):
-				info_util[i] = info_util[i].split(';')[:-1]
+		disciplina 		= str(disciplina)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.TURMAS 		  + disciplina 	 + '&dep=' 	+ departamento
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/disciplinas/" + departamento + "_" 		+ disciplina + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/disciplinas/" + departamento + "_" 		+ disciplina + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
 			return info_util
+
+
+
+		'''
+
 
 		contador = 0
 		while( contador < len(html)):
@@ -341,45 +362,45 @@ class Oferta:
 			contador += 1
 		if contador < len(html):
 			info_util = html[contador]
-			grava(info_util, pasta + 'tratado/' + nivel + "/Oferta/disciplinas/" + str(departamento) + "_" + disciplina + ".txt", time)
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/disciplinas/" + departamento + "_" + disciplina + ".txt", time)
 		else:
 			info_util = [[]]
-			print str(disciplina) + " - " + str(departamento) 
+			print disciplina + " - " + departamento
 
 		return info_util
-	
+		'''
 
 
 	@staticmethod
 	def espera(disciplina, nivel = Nivel.GRADUACAO, pasta = "Informacoes/temp/", processo = -1): # Incompleto
 	# a pagina é como:
 	# https://matriculaweb.unb.br/graduacao/faltavaga_rel.aspx?cod=116319
-		disciplina = str(disciplina)
-		if processo == -1:
-			if existe_arquivo(pasta + 'tratado/' + nivel + "/Oferta/espera/" + disciplina + ".txt"): 	# Os dados existem e estao processados
-				processo = 2
-			elif existe_arquivo(pasta + 'html/' + nivel + "/Oferta/espera/" + disciplina + ".txt"): 	# Os dados existem mas nao processados
-				processo = 1
-			else: 																						# Os dados existem
-				processo = 0
-		if processo == 0:
-			pagina = 'https://matriculaweb.unb.br/' + nivel + '/faltavaga_rel.aspx?cod=' + disciplina
-			html = pega_html(pagina)
-			time = grava(html, pasta + 'html/' + nivel + "/Oferta/espera/" + disciplina + ".txt")
-			html = html.split('\n')
-		elif processo == 1:
-			html = le_arquivo(pasta + 'html/' + nivel + "/Oferta/espera/" + disciplina + ".txt")
-			time = html[0].split()
-			html.remove(html[0])
-		else:
-			info_util = le_arquivo(pasta + 'tratado/' + nivel + "/Oferta/espera/" + disciplina + ".txt")
-			time = info_util[0].split()
-			info_util.remove(info_util[0])
-			for i in xrange(len(info_util)):
-				info_util[i] = info_util[i].split(';')[:-1]
+		disciplina 		= str(disciplina)
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.ESPERA 	 + disciplina
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/espera/" + disciplina + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/espera/" + disciplina + ".txt"
+		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		if info_util != None:
 			return info_util
+
+		'''
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 		info_util = html
-		
 		contador = 0
 		while contador < len(html) :
 			if 'alunos existentes' in html[contador]:
@@ -405,10 +426,11 @@ class Oferta:
 						info_util[i][j] = info_util[i][j].replace(" </small>","")
 					elif "</td></tr>" in info_util[i][j]:
 						info_util[i][j] = info_util[i][j].replace("</td></tr>","")
-			grava(info_util, pasta + 'tratado/' + nivel + "/Oferta/espera/" + disciplina + ".txt", time)
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/espera/" + disciplina + ".txt", time)
 		else:
 			#print 'Erro com: ' + nivel + " + disc:" + disciplina + ""
 			return [[]]
 		return info_util
 
 
+		'''
