@@ -5,26 +5,35 @@
 
 import datetime
 import requests
+import random
+import time
+import os
+import re
 
-def pega_html(link_pagina, timeout = 10):
+busca = re.findall
+
+def pega_html(link, limit = 10):
 	#pagina_html = mweb(nivel, 'faltavaga_rel', {'cod': disciplina})
 	#pagina_html = mweb(nivel, 'faltavaga_rel', {'cod': curso})
 	try:
-		html = requests.get(link_pagina, timeout=timeout)
+		html = requests.get(link, timeout=limit)
 		return html.content
 	except:
-		print "Nao foi possivel pegar a pagina: " + link_pagina
+		print "Nao foi possivel pegar a pagina: " + link
 	return ''
 
-def grava(info, nome, time = None, separador = '\n'):
+def grava(info, nome, tempo = None, separador = '\n'):
 	arquivo = open(nome, 'w')
-	if time == None:
-		time = datetime.datetime.now()
-		time = (str(time.year), str(time.month), str(time.day), str(time.hour), str(time.minute), str(time.second))
-	arquivo.write(time[0] + ' ' + time[1] + ' ' + time[2] + ' ' + time[3] + ' ' + time[4] + ' ' + time[5] + separador)
-	if type(info) == list:
+	if tempo == None:
+		tempo = datetime.datetime.now()
+		tempo = (str(tempo.year), str(tempo.month), str(tempo.day), str(tempo.hour), str(tempo.minute), str(tempo.second))
+	arquivo.write(tempo[0])
+	for i in xrange(1, 6):
+		arquivo.write(' ' + tempo[i])
+	arquivo.write(separador)
+	if type(info) == list or type(info) == type(()):
 		for elemento in info:
-			if type(elemento) == list:
+			if type(elemento) == list or type(info) == type(()):
 				for m in elemento:
 					arquivo.write(str(m) + ';')
 				arquivo.write(separador)
@@ -33,7 +42,7 @@ def grava(info, nome, time = None, separador = '\n'):
 	else:
 		arquivo.write(info)
 	arquivo.close()
-	return time
+	return tempo
 
 def existe_arquivo(nome):
 	try:
@@ -54,19 +63,21 @@ def le_arquivo(nome):
 			linhas[i] = linhas[i].split('\r')[0]
 	return linhas
 
-class Pagina:
-	# Da classe Cursos
-	FLUXO 			= '/fluxo.aspx?cod='
-	CURRICULO 		= '/curriculo.aspx?cod='
-	DADOS 			= '/curso_dados.aspx?cod='
-	RELACAO 		= '/curso_rel.aspx?cod='
-	# Da classe Disciplina
-	DISCIPLINA 		= '/disciplina.aspx?cod='
-	# Da classe Oferta
-	DEPARTAMENTO 	= '/oferta_dep.aspx?cod='
-	OFER_DISCI		= '/oferta_dis.aspx?cod='
-	TURMAS 			= '/oferta_dados.aspx?cod='
-	ESPERA 			= '/faltavaga_rel.aspx?cod='
+def grava_erro(erro, separador = '\n'):
+	arq = open("erros.txt", "a")
+	arq.write(erro + separador)
+	arq.close()
+
+def cria_pasta(diretorios):
+	#os.system('if [ ! -d "' + diretorio + '" ]; then echo "doing ' + diretorio + '"; mkdir ' + diretorio + '; fi')
+	w = diretorios[0]
+	for i in xrange(1, len(diretorios)):
+		os.system('if [ ! -d "' + w + '" ]; then mkdir ' + w + '; fi')
+		w += "/" + diretorios[i]
+	os.system('if [ ! -d "' + w + '" ]; then mkdir ' + w + '; fi')
+		
+
+
 
 class Nivel:
 	GRADUACAO = 'graduacao'
@@ -74,8 +85,8 @@ class Nivel:
 
 class Estado:
 	# A maneira que o dado está armazenado
-	tratado = "/" + "tratado" + "/"
-	html = "/" + "html" + "/"
+	tratado =  "tratado" + "/"
+	html =  "html" + "/"
 
 class Campus:
 	DARCY = 1
@@ -101,73 +112,83 @@ class Habilitacoes:
     MECA = 6912  # Engenharia de Controle e Automação
     ENM = 6424 # Engenharia Mecânica
 
-
-'''
-
-
-'''
-
-def auxiliar(pagina, origem, destino, processo): # Função auxiliar que é comum a todos
+def auxiliar(pagina, origem, destino, processo, delay = 0): # Função auxiliar que é comum a todos
 	# PARTE IGUAL
 	if processo != 0: # Protecao para a escolha de ja existir dados, mas nao existir
 		if processo != 1: # Protecao para a escolha dos dados estiverem tratados
-			if not existe_arquivo(origem):
+			if not existe_arquivo(destino):
 				processo = 1
 		if processo == 1:
-			if not existe_arquivo(destino):
+			if not existe_arquivo(origem):
 				processo = 0
 	if processo == 0: 						# se precisa capturar dados da internet
+		time.sleep(random.uniform(0, 0.5))
 		html = pega_html(pagina)
-		time = grava(html, origem)
+		if html == '':
+			return None, None, None
+		tempo = grava(html, origem)
 		html = html.split('\n')
 	elif processo == 1:						# Se ja existe o dado bruno no computador
 		html = le_arquivo(origem)
-		time = html[0].split()
+		tempo = html[0].split()
 		html.remove(html[0])
 	else:									# Se ja existem e os dados estao tratados
 		info_util = le_arquivo(destino)
-		time = info_util[0].split()
+		tempo = info_util[0].split()
 		info_util.remove(info_util[0])
 		for i in xrange(len(info_util)):
 			info_util[i] = info_util[i].split(';')[:-1]
-		return time, None, info_util
-	return time, html, None
+		return tempo, None, info_util
+	return tempo, html, None
+
+
+'''
+
+
+'''
+
+
 
 class Cursos:
 
 	@staticmethod
-	def fluxo(habilitacao, nivel = Nivel.GRADUACAO, processo = 2):
+	def fluxo(habilitacao, nivel = Nivel.GRADUACAO, pasta = "Informacoes/temp/", processo = 2):
 	# https://matriculaweb.unb.br/graduacao/fluxo.aspx?cod=3131
 		habilitacao 	= str(habilitacao)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.FLUXO + habilitacao
-		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/f_" + habilitacao + ".txt"
-		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/f_" + habilitacao + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Cursos"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Cursos"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/fluxo.aspx?cod=' 		+ habilitacao
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/f_"				+ habilitacao + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/f_" 			+ habilitacao + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
 		return html
 
 	@staticmethod
-	def curriculo(habilitacao, nivel = Nivel.GRADUACAO, processo = -1):
+	def curriculo(habilitacao, nivel = Nivel.GRADUACAO, pasta = "Informacoes/temp/", processo = -1):
 	# https://matriculaweb.unb.br/graduacao/curriculo.aspx?cod=3131
-		
 		habilitacao 	= str(habilitacao)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.CURRICULO + habilitacao
-		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/c_" + habilitacao + ".txt"
-		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/c_" + habilitacao + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Cursos"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Cursos"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/curriculo.aspx?cod=' 	+ habilitacao
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/c_" 			+ habilitacao + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/c_" 			+ habilitacao + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
 		return html
 
 	@staticmethod
-	def curso(curso, nivel = Nivel.GRADUACAO, processo = -1):
+	def curso(curso, nivel = Nivel.GRADUACAO, pasta = "Informacoes/temp/", processo = -1):
 	# https://matriculaweb.unb.br/graduacao/curso_dados.aspx?cod=19
 		curso 			= str(curso)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.DADOS + curso
-		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/" + curso + ".txt"
-		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/" + curso + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Cursos"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Cursos"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/curso_dados.aspx?cod=' + curso
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/" 				+ curso + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/" 				+ curso + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
 		return html
@@ -175,16 +196,18 @@ class Cursos:
 
 
 	@staticmethod
-	def relacao(nivel = Nivel.GRADUACAO, campi = Campus.DARCY, processo = -1):
+	def relacao(nivel = Nivel.GRADUACAO, campi = Campus.DARCY, pasta = "Informacoes/temp/", processo = -1):
 	# https://matriculaweb.unb.br/graduacao/curso_rel.aspx?cod=1
 		campi 			= str(campi)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.RELACAO + campi
-		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/r_" + campi + ".txt"
-		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/r_" + campi + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Cursos"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Cursos"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/curso_rel.aspx?cod=' 	+ campi
+		origem 			= pasta + Estado.html 			 + nivel + "/Cursos/r_" 			+ campi + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Cursos/r_" 			+ campi + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
-		# Ate esse momento, só esta definido html e time. Os outros dados não são uteis
+		# Ate esse momento, só esta definido html e tempo. Os outros dados não são uteis
 		return html
 
 
@@ -193,10 +216,12 @@ class Disciplina:
 	def informacoes(disciplina, nivel = Nivel.GRADUACAO, pasta = "Informacoes/temp/", processo = -1):
 		# https://matriculaweb.unb.br/graduacao/disciplina.aspx?cod=116319
 		disciplina 		= str(disciplina)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.DISCIPLINA + disciplina
-		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/espera/" + disciplina + ".txt"
-		destino			= pasta + Estado.tratado 		 + nivel + "/Oferta/espera/" + disciplina + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Disciplinas"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Disciplinas"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/disciplina.aspx?cod=' 	+ disciplina
+		origem 			= pasta + Estado.html 			 + nivel + "/Disciplinas/" 		+ disciplina + ".txt"
+		destino			= pasta + Estado.tratado 		 + nivel + "/Disciplinas/" 		+ disciplina + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
 
@@ -236,7 +261,7 @@ class Disciplina:
 		#info_util[3] = info_util[3][0]
 		print info_util
 		print '\n\n'
-		grava(info_util, pasta + Estado.tratado + nivel + "/Disciplinas/" + disciplina + '.txt', time)
+		grava(info_util, pasta + Estado.tratado + nivel + "/Disciplinas/" + disciplina + '.txt', tempo)
 		return info_util
 		'''
 		
@@ -244,28 +269,25 @@ class Oferta:
 
 	@staticmethod
 	def departamentos(nivel = Nivel.GRADUACAO, campi = Campus.DARCY, pasta = "Informacoes/temp/", processo = -1):
-		# processo so recebe 0 ou 1 ou 3 como argumento
 		# a pagina é como:
 		# https://matriculaweb.unb.br/graduacao/oferta_dep.aspx?cod=1
 		campi			= str(campi)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.DEPARTAMENTO + campi
-		origem 			= pasta + Estado.html + nivel + "/Oferta/" + campi + ".txt"
-		destino 		= pasta + Estado.tratado + nivel + "/Oferta/" + campi + '.txt'
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Oferta"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Oferta"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/oferta_dep.aspx?cod=' 	+ campi
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/" 				+ campi + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/" 				+ campi + '.txt'
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
-
-
-		'''
-
-
-
+		# Trata os dados de departamentos em um campi
 
 		# Parte 1 em que somente pega a pagina html e transforma em string
 		# Neste momento já foi armazenado o html em um arquivo. Aqui começa a tratar os dados para armazenar em
 		# pasta + Estado.tratado + nivel + "/Oferta/" + campi + ".txt"
 		# tratar uma lista de departamentos
 		# indica para tratar os dados armazenados
+
 		contador = 0
 		while contador < len(html):
 			if 'departamentos existentes' in html[contador]:
@@ -282,13 +304,13 @@ class Oferta:
 				info_util[i] = info_util[i].split('</td><td>')
 				info_util[i][2] = info_util[i][2].split("' style='text-transform: uppercase;'>")[1]
 				info_util[i][2] = info_util[i][2].split("</a></td></tr>")[0]
-			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/" + campi + '.txt', time)
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/" + campi + '.txt', tempo)
 		else:
-			print 'Erro com: ' + nivel + " + campi:" + campi
+			grava_erro('Oferta.departamentos:nivel=' + nivel + ";campi=" + campi)
 			return [[]] 
 		# em info_util ja esta armazenado como info_util[i] = [codigo, sigla, nome]
 		return info_util
-		'''
+		
 	
 	@staticmethod
 	def disciplinas(departamento, nivel = Nivel.GRADUACAO, campi = Campus.DARCY, pasta = "Informacoes/temp/", processo = -1):
@@ -297,18 +319,15 @@ class Oferta:
 		# a pagina é como https://matriculaweb.unb.br/graduacao/oferta_dis.aspx?cod=422
 		# departamento sempre será string pois existe o departamento denominado "003" em vez de 3.
 		campi 			= str(campi)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.OFER_DISCI + departamento
-		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/" + campi + "_" + departamento + ".txt"
-		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/" + campi + "_" + departamento + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Oferta"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Oferta"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/oferta_dis.aspx?cod=' 	+ departamento
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/" 				+ campi + "_" + departamento + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/" 				+ campi + "_" + departamento + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
-
-
-
-		'''
-		# Agora que ja tem os dados armazenados na memoria RAM, no caso todo o arquivo html em que cada
-		# linha é um elemento da lista na ordem dada por arquivo. lista[0] = primeira linha e assim por diante
+		# Trata os dados das disciplinas de um determinado departamento
 		contador = 0
 		while contador < len(html) :
 			if 'disciplinas existentes' in html[contador]:
@@ -327,12 +346,11 @@ class Oferta:
 				info_util[i] = info_util[i].split("<a title='")
 				info_util[i][0] = info_util[i][0].split("</td><td><a href=")[0]
 				info_util[i][1] = info_util[i][1].split("' href='")[0]
-			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/" + campi + "_" + departamento + ".txt", time)
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/" + campi + "_" + departamento + ".txt", tempo)
 		else:
-			print 'Erro com: ' + nivel + " + dep:" + departamento
+			grava_erro('Oferta.disciplinas:nivel=' + nivel + ";dep=" + departamento)
 			return [[]]
 		return info_util
-		'''
 
 
 	@staticmethod
@@ -342,19 +360,37 @@ class Oferta:
 		# se tiver departamento:
 		# https://matriculaweb.unb.br/graduacao/oferta_dados.aspx?cod=200212&dep=004
 		# assume-se que departamento já é string
+
+
+		CABECALHO = "Departamento.*?cod=.*?>(.*?) <small> (.*?)</small></a></td>"\
+						+ ".*?" \
+						+ "da Disciplina</th><td>(.*?)</td></tr>" \
+						+ ".*?" \
+						+ "Nome</th><td><a title=.*?>(.*?) <i class=" \
+						+ ".*?" \
+						+ "\(Teor-Prat-Ext-Est\)</small></th><td>(\d+)-(\d+)-(\d+)-(\d+)" \
+						+ ".*?" \
+						+ "<h4>Campus (.*?)</h4>"
+		TURMA 		= "<td class='turma'>(.*?)</td></tr>" \
+						+ ".*?" \
+						+ "<td>Vagas</td><td><span>(\d+)</span></td></tr>" \
+						+ ".*?" \
+						+ "<td>Ocupadas</td><td><span style=.*?>(\d+)</span></td></tr>" \
+						+ ".*?" \
+						+ "<td>Restantes</td><td><span style=.*?>(\d+)</span></td></tr>"
+
+
+
 		disciplina 		= str(disciplina)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.TURMAS 		  + disciplina 	 + '&dep=' 	+ departamento
-		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/disciplinas/" + departamento + "_" 		+ disciplina + ".txt"
-		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/disciplinas/" + departamento + "_" 		+ disciplina + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Oferta", "turmas"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Oferta", "turmas"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/oferta_dados.aspx?cod='+ disciplina 	+ '&dep=' 	+ departamento
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/turmas/" 		+ departamento 	+ "_" 		+ disciplina + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/turmas/" 		+ departamento 	+ "_" 		+ disciplina + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo)
 		if info_util != None:
 			return info_util
-
-
-
-		'''
-
-
+		# Trata os dados das turmas
 		contador = 0
 		while( contador < len(html)):
 			if "Departamento" in html[contador]:
@@ -362,13 +398,28 @@ class Oferta:
 			contador += 1
 		if contador < len(html):
 			info_util = html[contador]
-			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/disciplinas/" + departamento + "_" + disciplina + ".txt", time)
+			info_util = info_util.split("<div class='table-responsive' style=")
+			info_util[0] = busca(CABECALHO, info_util[0])
+			info_util[0] = info_util[0][0]
+			print info_util[0]
+			#info_util.remove(info_util[-1])
+			#for i in xrange(1,len(info_util)-1):
+			#	pass
+			#quantidade = info_util.count("Turno")
+			#info_util = busca(TURMAS, info_util)
+			#if(len(info_util) == quantidade):
+				#print info_util
+			#	pass
+			#else:
+			#	print "Deu erro com " + disciplina + " de " + departamento
+
+
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/turmas/" + departamento + "_" + disciplina + ".txt", tempo)
 		else:
-			info_util = [[]]
+			info_util = []
 			print disciplina + " - " + departamento
 
 		return info_util
-		'''
 
 
 	@staticmethod
@@ -376,30 +427,18 @@ class Oferta:
 	# a pagina é como:
 	# https://matriculaweb.unb.br/graduacao/faltavaga_rel.aspx?cod=116319
 		disciplina 		= str(disciplina)
-		pagina 			= 'https://matriculaweb.unb.br/' + nivel + Pagina.ESPERA 	 + disciplina
-		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/espera/" + disciplina + ".txt"
-		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/espera/" + disciplina + ".txt"
-		time, html, info_util = auxiliar(pagina, origem, destino, processo)
+		cria_pasta(("Informacoes", "temp", Estado.html, 	nivel, "Oferta", "espera"))
+		cria_pasta(("Informacoes", "temp", Estado.tratado, 	nivel, "Oferta", "espera"))
+		pagina 			= 'https://matriculaweb.unb.br/' + nivel + '/faltavaga_rel.aspx?cod=' + disciplina
+		origem 			= pasta + Estado.html 			 + nivel + "/Oferta/espera/" 		  + disciplina + ".txt"
+		destino 		= pasta + Estado.tratado 		 + nivel + "/Oferta/espera/" 		  + disciplina + ".txt"
+		tempo, html, info_util = auxiliar(pagina, origem, destino, processo, random.uniform(0, 0.5))
 		if info_util != None:
 			return info_util
 
-		'''
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+		# Trata os dados de espera
 		info_util = html
 		contador = 0
 		while contador < len(html) :
@@ -426,11 +465,10 @@ class Oferta:
 						info_util[i][j] = info_util[i][j].replace(" </small>","")
 					elif "</td></tr>" in info_util[i][j]:
 						info_util[i][j] = info_util[i][j].replace("</td></tr>","")
-			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/espera/" + disciplina + ".txt", time)
+			grava(info_util, pasta + Estado.tratado + nivel + "/Oferta/espera/" + disciplina + ".txt", tempo)
+			contador += 1
 		else:
-			#print 'Erro com: ' + nivel + " + disc:" + disciplina + ""
+			grava_erro('Oferta.espera:nivel=' + nivel + ";disc=" + disciplina)
 			return [[]]
 		return info_util
-
-
-		'''
+		# '''
