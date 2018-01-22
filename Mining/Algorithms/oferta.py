@@ -1,9 +1,6 @@
 from defines import *
 import auxiliar
-import rangendom
 import re
-
-		
 
 def departamentos(nivel = Nivel.GRADUACAO, campi = Campus.DARCY, pasta = "Informacoes/temp/", processo = -1):
 	# a pagina é como:

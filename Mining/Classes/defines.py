@@ -1,19 +1,18 @@
 #  -*- coding: utf-8 -*-
-
 class Nivel:
-	GRADUACAO = 'graduacao'
-	POS = 'posgraduacao'
+    GRADUACAO = 'graduacao'
+    POS = 'posgraduacao'
 
 class Estado:
-	# A maneira que o dado está armazenado
-	tratado =  "tratado" + "/"
-	html =  "html" + "/"
+    # A maneira que o dado está armazenado
+    tratado =  "tratado" + "/"
+    html =  "html" + "/"
 
 class Campus:
-	DARCY = 1
-	PLANALTINA = 2
-	CEILANDIA = 3
-	GAMA = 4
+    DARCY = 1
+    PLANALTINA = 2
+    CEILANDIA = 3
+    GAMA = 4
 
 class Departamento:
     '''Enumeração dos códigos de cada departamento.'''

@@ -1,0 +1,5 @@
+Informacoes/
+Mining/Other/
+Mining/Algorithms/__pycache__/
+Mining/Classes/__pycache__/
+*.txt
