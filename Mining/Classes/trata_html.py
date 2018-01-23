@@ -120,12 +120,14 @@ def trans_2(html):
 	html = info_util
 	retorno.append(html)
 	
+	'''
 	for i in retorno:
 		if type(i) == str:
 			print(i)
 		else:
 			for j in i:
 				print(j)
+	'''
 	
 	return True, retorno
 def trans_3(html):
@@ -345,13 +347,17 @@ def get_1(	nivel = defines.Nivel.GRADUACAO, \
 			campus = defines.Campus.DARCY):
 	# Oferta
 	# Lista de departamentos em um campus
+	global pasta
+	
 	nivel		= str(nivel)
 	campus		= str(campus)
+	
+	subpasta 	= pasta + "html/" + nivel + "/Oferta/"
 	pagina		= "https://matriculaweb.unb.br/" + nivel + "/oferta_dep.aspx?cod=" + campus
 	
-	pasta 		= "Informacoes/temp/html/" + nivel + "/Oferta/"
-	retorno		= get_html(pasta + campus + ".txt")
+	retorno		= get_html(subpasta + campus + ".txt")
 	retorno		= trans_1(retorno)
+	
 	return retorno
 
 
@@ -359,13 +365,20 @@ def get_2(	nivel = defines.Nivel.GRADUACAO, \
 			departamento = defines.Departamento.CIC):
 	# Departamento
 	# Oferta de um departamento, contem uma lista de disciplinas
+	global pasta
+	
 	nivel		= str(nivel)
 	departamento= str(departamento)
+	
+	subpasta 	= pasta + "html/" + nivel + "/Oferta/"
 	pagina		= "https://matriculaweb.unb.br/" + nivel + "/oferta_dis.aspx?cod=" + departamento
 
-	pasta 		= "Informacoes/temp/html/" + nivel + "/Oferta/1_"
-	retorno		= get_html(pasta + departamento + ".txt")
+	# Ainda a editar
+	subpasta   += "1_"
+
+	retorno		= get_html(subpasta + departamento + ".txt")
 	retorno		= trans_2(retorno)
+	
 	return retorno
 
 def get_3(	nivel = defines.Nivel.GRADUACAO, \
@@ -373,16 +386,20 @@ def get_3(	nivel = defines.Nivel.GRADUACAO, \
 			departamento = None):
 	# Disciplina
 	# Turmas e oferta de uma disciplina
+	global pasta
+	
 	nivel		= str(nivel)
 	disciplina	= str(disciplina)
+	
+	subpasta 	= pasta + "html/" + nivel + "/Oferta/"
 	pagina		= "https://matriculaweb.unb.br/" + nivel + "/oferta_dados.aspx?cod=" + disciplina
 	if departamento != None:
 		departamento = str(departamento)
 		pagina += "&dep=" + departamento
 
-	pasta 		= "Informacoes/temp/html/" + nivel + "/Oferta/turmas/"
-	retorno		= get_html(pasta + departamento + "_" + disciplina + ".txt")
+	retorno		= get_html(subseta_dirpasta + departamento + "_" + disciplina + ".txt")
 	retorno		= trans_3(retorno)
+	
 	return retorno
 	
 def get_4(	nivel = defines.Nivel.GRADUACAO, \
@@ -432,12 +449,14 @@ def get_9(	nivel = defines.Nivel.GRADUACAO, \
 	habilitacao	= str(habilitacao)
 	pagina		= "https://matriculaweb.unb.br/" + nivel + "/curriculo.aspx?cod=" + habilitacao
 
+pasta = "../../Informacoes/temp_2018_01_22/"
+
 if __name__ == "__main__":
-	bol, r = get_1(campus = defines.Campus.DARCY)
+	#bol, r = get_1(campus = defines.Campus.DARCY)
 	#bol, r = get_1(campus = defines.Campus.PLANALTINA)
 	#bol, r = get_1(campus = defines.Campus.CEILANDIA)
 	#bol, r = get_1(campus = defines.Campus.GAMA)
-	#bol, r = get_2(departamento = defines.Departamento.CIC)
+	bol, r = get_2(departamento = defines.Departamento.CIC)
 	#bol, r = get_2(departamento = defines.Departamento.ENE)
 	#bol, r = get_3(departamento = defines.Departamento.CIC, disciplina = defines.Disciplina.APC)
 	#bol, r = get_3(departamento = defines.Departamento.CIC, disciplina = defines.Disciplina.ED)
